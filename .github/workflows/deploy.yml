@@ -44,6 +44,6 @@ jobs:
             # Run container
             docker run -d \
               --name python-service \
-              -p 8000:8000 \
+              -p 9723:9723 \
               -e DATABASE_URL="postgresql://admin:sumanth123@172.17.0.1:5432/placement" \
               python-service
