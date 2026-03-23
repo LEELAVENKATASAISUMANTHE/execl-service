@@ -2,9 +2,9 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
-from db import init_pool, close_pool, get_pool
-from config import init_schema
-from routes.schema_routes import router as schema_router
+from app.db import init_pool, close_pool, get_pool
+from app.config import init_schema
+from app.routes.schema_routes import router as schema_router
 
 load_dotenv()
 

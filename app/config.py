@@ -1,5 +1,5 @@
 import asyncpg
-from schema import ColumnMeta, FKEdge, TableMeta, SchemaGraph
+from app.schema import ColumnMeta, FKEdge, TableMeta, SchemaGraph
 
 # ── Filters ───────────────────────────────────────────────────────────
 EXCLUDED_PREFIXES = ("nc_", "directus_", "xc_", "_prisma", "pg_")
