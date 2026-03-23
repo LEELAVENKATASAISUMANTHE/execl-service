@@ -1,13 +1,4 @@
 fastapi
 uvicorn
-sqlalchemy
-psycopg2-binary
-pydantic-settings
+asyncpg
 python-dotenv
-```
-
----
-
-## `.env`
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/yourdb

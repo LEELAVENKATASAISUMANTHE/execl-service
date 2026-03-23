@@ -1,7 +1,6 @@
 import asyncpg
-from app.schema import ColumnMeta, FKEdge, TableMeta, SchemaGraph
+from schema import ColumnMeta, FKEdge, TableMeta, SchemaGraph
 
-# ── Filters ───────────────────────────────────────────────────────────
 EXCLUDED_PREFIXES = ("nc_", "directus_", "xc_", "_prisma", "pg_")
 EXCLUDED_TABLES   = {
     "databasechangelog", "notification",
@@ -17,10 +16,6 @@ PREFERRED_LOOKUP_NAMES = [
 
 _schema_graph: SchemaGraph | None = None
 
-
-# ══════════════════════════════════════════════════════════════════════
-#  QUERIES
-# ══════════════════════════════════════════════════════════════════════
 
 async def _get_all_tables(conn: asyncpg.Connection) -> list[str]:
     rows = await conn.fetch("""
@@ -131,7 +126,7 @@ async def _get_columns(
             name           = col_name,
             data_type      = r["data_type"],
             is_required    = (
-                r["is_nullable"]     == "NO"
+                r["is_nullable"]        == "NO"
                 and r["column_default"] is None
                 and not is_pk
             ),
@@ -147,10 +142,6 @@ async def _get_columns(
         ))
     return columns
 
-
-# ══════════════════════════════════════════════════════════════════════
-#  INFERENCE PASSES
-# ══════════════════════════════════════════════════════════════════════
 
 def _classify_junctions(graph: SchemaGraph) -> None:
     for table in graph.tables.values():
@@ -172,14 +163,12 @@ def _classify_junctions(graph: SchemaGraph) -> None:
 def _infer_natural_key(table: TableMeta) -> str | None:
     col_map = {c.name: c for c in table.columns}
 
-    # Pass 1 — preferred name that is unique or required
     for name in PREFERRED_LOOKUP_NAMES:
         if name in col_map:
             col = col_map[name]
             if col.is_unique or col.is_required:
                 return name
 
-    # Pass 2 — any unique non-PK non-system column
     for col in table.columns:
         if col.is_unique and not col.is_primary_key and col.name not in SYSTEM_COLS:
             return col.name
@@ -187,24 +176,16 @@ def _infer_natural_key(table: TableMeta) -> str | None:
     return None
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  MASTER BUILDER
-# ══════════════════════════════════════════════════════════════════════
-
 async def build_schema_graph(pool: asyncpg.Pool) -> SchemaGraph:
     async with pool.acquire() as conn:
-
-        # Step 1 — DB-wide queries (run once)
         table_names = await _get_all_tables(conn)
         enums       = await _get_enums(conn)
         fk_edges    = await _get_fk_edges(conn)
 
-        # Step 2 — Build FK lookup map
         fk_map: dict[str, dict[str, FKEdge]] = {}
         for edge in fk_edges:
             fk_map.setdefault(edge.from_table, {})[edge.from_col] = edge
 
-        # Step 3 — Build each table
         tables: dict[str, TableMeta] = {}
         for table_name in table_names:
             pk_cols     = await _get_pk_cols(conn, table_name)
@@ -214,7 +195,6 @@ async def build_schema_graph(pool: asyncpg.Pool) -> SchemaGraph:
             )
             tables[table_name] = TableMeta(name=table_name, columns=columns)
 
-    # Step 4 — Inference (pure Python, no DB needed)
     graph = SchemaGraph(tables=tables, fk_edges=fk_edges, fk_map=fk_map)
     _classify_junctions(graph)
     for table in graph.tables.values():
