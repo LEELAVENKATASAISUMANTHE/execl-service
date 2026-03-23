@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from app.db import engine
 
 app = FastAPI()
@@ -14,5 +16,9 @@ def get_tables():
     FROM information_schema.tables
     WHERE table_schema = 'public';
     """
-    result = engine.execute(query)
-    return {"tables": [row[0] for row in result]}
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text(query))
+            return {"tables": [row[0] for row in result]}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {exc}") from exc
