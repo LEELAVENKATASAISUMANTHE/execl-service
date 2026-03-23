@@ -13,7 +13,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 📦 Copy project to server
+      # 🧹 Clean old files from server before copying
+      - name: Clean server directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            rm -rf ~/python-service
+            mkdir -p ~/python-service
+
+      # 📦 Copy fresh files to server
       - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -30,18 +41,14 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-
           script: |
             cd ~/python-service
 
-            # Stop old container if exists
             docker stop python-service || true
             docker rm python-service || true
 
-            # Build new image
             docker build -t python-service .
 
-            # Run container
             docker run -d \
               --name python-service \
               -p 9723:9723 \
